@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard</title>
+    <style>
+        body { background: #111; color: white; text-align: center; font-family: Arial, sans-serif; }
+        .container { margin-top: 50px; }
+        h1 { color: #ff4500; }
+        table { width: 60%; margin: auto; border-collapse: collapse; border-radius: 5px; overflow: hidden; }
+        th, td { padding: 12px; border: 1px solid #900; font-size: 18px; }
+        th { background: #900; color: white; }
+        td { background: #222; color: white; }
+        .button { padding: 12px 20px; background: #ff4500; color: white; border: none; cursor: pointer; font-size: 18px; border-radius: 5px; }
+        .button:hover { background: #ff2200; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏆 Global Leaderboard 🏆</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Score</th>
+                    <th>Reflex Rate</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardTable">
+                <tr><td colspan="4">Loading leaderboard...</td></tr>
+            </tbody>
+        </table>
+        <br>
+        <button class="button" onclick="window.location.href='index.html'">Back to Game</button>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore.js";
+
+        // 🔥 Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyCOez2i2jX1tXtO_rtSHFW3q-OXigaN-mc",
+            authDomain: "clickgameleaderboard.firebaseapp.com",
+            projectId: "clickgameleaderboard",
+            storageBucket: "clickgameleaderboard.appspot.com",
+            messagingSenderId: "520330164927",
+            appId: "1:520330164927:web:4882821a0a3b29f828240a",
+            measurementId: "G-J8PJS5WHX2"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        function updateLeaderboard(snapshot) {
+    let tableBody = document.getElementById("leaderboardTable");
+    tableBody.innerHTML = ""; // Clear previous data
+
+    if (snapshot.empty || snapshot.docs.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="4">No scores yet!</td></tr>`;
+        return;
+    }
+
+    let leaderboardData = [];
+    snapshot.forEach(doc => leaderboardData.push(doc.data()));
+
+    // ✅ Convert reflex_rate to a number to prevent errors
+    leaderboardData.forEach(entry => {
+        entry.reflex_rate = Number(entry.reflex_rate); // Ensures it's a number
+    });
+
+    // ✅ Sorting by highest reflex_rate first
+    leaderboardData.sort((a, b) => b.reflex_rate - a.reflex_rate);
+
+    leaderboardData.forEach((entry, index) => {
+        let row = `<tr>
+                    <td>#${index + 1}</td>
+                    <td>${entry.name}</td>
+                    <td>${entry.score}</td>
+                    <td>${entry.reflex_rate.toFixed(2)}</td>
+                  </tr>`;
+        tableBody.innerHTML += row;
+    });
+}
+
+
+        // 🔥 Real-time listener for Firestore updates
+        onSnapshot(query(collection(db, "leaderboard"), orderBy("reflex_rate", "desc")), updateLeaderboard);
+    </script>
+</body>
+</html>

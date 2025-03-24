@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Click Game</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; text-align: center; font-family: Arial, sans-serif; }
+        body { background: #111; color: white; display: flex; flex-direction: column; align-items: center; }
+ 
+        .top-bar a { color: white; text-decoration: none; font-weight: bold; transition: 0.3s; }
+        .top-bar a:hover { color: #ff4500; }
+        .game-container { position: relative; width: 70vw; height: 70vh; background: #222; margin-top: 20px; overflow: hidden; border: 5px solid #900; border-radius: 10px; box-shadow: 0 0 15px #900; }
+        .score { font-size: 28px; margin: 10px; font-weight: bold; color: #ff4500; }
+        .ball { position: absolute; width: 100px; height: 100px; cursor: pointer; border-radius: 50%; box-shadow: 0 0 10px #ff4500; }
+        .popup { display: none; position: absolute; width: 320px; background: #900; padding: 20px; border-radius: 10px; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px #ff4500; color: white; text-align: center; }
+        .popup p { font-size: 18px; margin-bottom: 15px; }
+        .button { padding: 12px 20px; margin: 10px; cursor: pointer; background: #ff4500; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; transition: 0.3s; }
+        .button:hover { background: #ff2200; box-shadow: 0 0 10px #ff4500; }
+		body {
+    -webkit-user-select: none;  
+    -moz-user-select: none;     
+    -ms-user-select: none;      
+    user-select: none;          
+    -webkit-touch-callout: none; 
+}
+.ball {
+    pointer-events: auto;
+    -webkit-user-drag: none; 
+    user-drag: none; 
+}
+
+
+		
+    </style>
+	<link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <div class="top-bar" style="  width: 100%; background: #900; color: white; padding: 15px; display: flex; justify-content: space-around; font-size: 18px;  ">
+        <a href="#">Game</a>
+        <a href="leaderboard.html">Leaderboard</a>
+        <a href="about.html">About</a>
+
+    </div>
+    
+    <div class="score">Score: <span id="score">0</span>
+    <button class="button" onclick="restartGame()">Restart</button>
+	<button class="button" onclick="toggleFullScreen()">Full Screen</button></div>
+    
+    <div class="game-container" id="gameContainer">
+        <img src="ball.png" class="ball" id="ball" onclick="moveBall(event)">
+    </div>
+    
+    <div class="popup" id="popup">
+        <p>You shouldn't have clicked there</p>
+        <p>Reflex Rate: <span id="reflexRate">0</span></p>
+        <button class="button" onclick="restartGame()">Restart</button>
+        <button class="button" onclick="addToLeaderboard()">Add to Leaderboard</button>
+    </div>
+
+    <audio id="coinSound">
+        <source src="coin.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+  
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore.js";
+
+       
+        const firebaseConfig = {
+            apiKey: "AIzaSyCOez2i2jX1tXtO_rtSHFW3q-OXigaN-mc",
+            authDomain: "clickgameleaderboard.firebaseapp.com",
+            projectId: "clickgameleaderboard",
+            storageBucket: "clickgameleaderboard.appspot.com",
+            messagingSenderId: "520330164927",
+            appId: "1:520330164927:web:4882821a0a3b29f828240a",
+            measurementId: "G-J8PJS5WHX2"
+        };
+
+       
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        
+        window.db = db;
+        window.collection = collection;
+        window.addDoc = addDoc;
+    </script>
+
+    <script>
+        let score = 0;
+        let startTime = null;
+        let firstClick = false;
+        let gameOverState = false;
+
+        const ball = document.getElementById('ball');
+        const scoreDisplay = document.getElementById('score');
+        const gameContainer = document.getElementById('gameContainer');
+        const popup = document.getElementById('popup');
+        const reflexRateDisplay = document.getElementById('reflexRate');
+        const coinSound = document.getElementById('coinSound');
+
+        gameContainer.addEventListener("click", function(event) {
+    if (!gameOverState && event.target !== ball) {
+        setTimeout(() => { gameOver(); }, 250); 
+    }
+});
+
+
+        function moveBall(event) {
+            if (gameOverState) return;
+            event.stopPropagation();
+            if (!firstClick) {
+                startTime = Date.now();
+                firstClick = true;
+            }
+            score++;
+            scoreDisplay.textContent = score;
+            let x = Math.random() * (gameContainer.clientWidth - 100);
+            let y = Math.random() * (gameContainer.clientHeight - 100);
+            ball.style.left = x + 'px';
+            ball.style.top = y + 'px';
+            
+           
+            if (coinSound) {
+                coinSound.currentTime = 0;
+                coinSound.play().catch(error => console.error("Sound error:", error));
+            }
+        }
+
+function gameOver() {
+    if (firstClick && score > 1) {
+        gameOverState = true;
+        let elapsedTime = (Date.now() - startTime) / 1000;
+        let reflexRate = score / elapsedTime;
+        reflexRateDisplay.textContent = reflexRate.toFixed(2);
+        popup.style.display = 'block';
+
+       
+        window.lastScore = score;
+        window.lastReflexRate = reflexRate;
+
+        firstClick = false;
+    }
+}
+
+
+
+function restartGame() {
+    popup.style.display = 'none';
+
+    
+    score = 0;
+    scoreDisplay.textContent = 0;
+    startTime = null;
+    firstClick = false;
+    gameOverState = false;
+}
+
+
+async function addToLeaderboard() {
+    let playerName = prompt("Enter your name:");
+    if (!playerName) return;
+
+    let finalScore = score; 
+    let reflexRate = finalScore / ((Date.now() - startTime) / 1000);
+
+    try {
+        await addDoc(collection(db, "leaderboard"), {
+            name: playerName,
+            score: finalScore, // Store final score
+            reflex_rate: reflexRate.toFixed(2), 
+            timestamp: new Date() 
+        });
+
+        alert("✅ Score added successfully!");
+        window.location.href = "leaderboard.html";
+    } catch (error) {
+        console.error("❌ Error saving score:", error);
+    }
+}
+
+
+(function() {
+    let score = 0; 
+
+    window.getScore = function() {
+        return score; 
+    };
+
+    function moveBall(event) {
+        if (gameOverState || !canClick) return;
+        canClick = false;
+        
+        event.stopPropagation();
+        if (!firstClick) {
+            startTime = Date.now();
+            firstClick = true;
+        }
+
+        score++;
+        scoreDisplay.textContent = score;
+
+        let x = Math.random() * (gameContainer.clientWidth - 100);
+        let y = Math.random() * (gameContainer.clientHeight - 100);
+        ball.style.left = x + "px";
+        ball.style.top = y + "px";
+
+        if (coinSound) {
+            coinSound.currentTime = 0;
+            coinSound.play().catch(error => console.error("Sound error:", error));
+        }
+
+        setTimeout(() => {
+            canClick = true;
+        }, 200);
+    }
+})();
+
+
+document.addEventListener("contextmenu", event => event.preventDefault());
+
+
+document.addEventListener("keydown", event => {
+    if (event.key === "F12" || 
+        (event.ctrlKey && event.shiftKey && (event.key === "I" || event.key === "J")) || 
+        (event.ctrlKey && event.key === "U")) {
+        event.preventDefault();
+        alert("⚠ Developer tools are disabled!");
+    }
+});
+
+(function() {
+    let devtoolsOpen = false;
+    const element = new Image();
+
+    Object.defineProperty(element, "id", {
+        get: function() {
+            devtoolsOpen = true;
+            alert("⚠ Cheating is not allowed!");
+        }
+    });
+
+    setInterval(() => {
+        devtoolsOpen = false;
+        console.log(element);
+    }, 1000);
+})();
+
+
+function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+            console.error("Error trying to enable full-screen mode:", err);
+        });
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js")
+    .then(() => console.log("✅ Service Worker Registered"))
+    .catch(error => console.error("❌ Service Worker Failed:", error));
+}
+
+    </script>
+</body>
+</html>
